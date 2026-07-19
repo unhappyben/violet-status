@@ -18,6 +18,9 @@ module.exports = async (req, res) => {
   const message = String((req.body && req.body.message) || '').trim().slice(0, 200);
   if (!message) return res.status(400).json({ ok: false, error: 'empty message' });
 
+  // The sender's own subscription is skipped — they don't need the push too.
+  const excludeAuth = String((req.body && req.body.excludeAuth) || '');
+
   let subs;
   try {
     subs = await getSubscriptions();
@@ -25,11 +28,13 @@ module.exports = async (req, res) => {
     return res.status(500).json({ ok: false, error: String(e) });
   }
 
-  const entries = Object.entries(subs);
+  const entries = Object.entries(subs).filter(function (pair) {
+    return pair[0] !== excludeAuth;
+  });
   if (!entries.length) {
     return res.json({
       ok: false,
-      error: 'No devices subscribed yet — enable notifications on Galina\'s phone first'
+      error: 'No other devices subscribed yet — enable notifications on Galina\'s phone first'
     });
   }
 

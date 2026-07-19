@@ -183,6 +183,18 @@
     if (perm === 'granted') {
       enableNotifBtn.hidden = true;
       notifState.textContent = 'Notifications are ON for this device ✓';
+      // Re-sync the subscription with the server on every app open
+      // (idempotent upsert — self-heals if the server copy was lost).
+      navigator.serviceWorker.ready.then(function (reg) {
+        return reg.pushManager.getSubscription();
+      }).then(function (sub) {
+        if (!sub) return;
+        return fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sub)
+        });
+      }).catch(function () {});
     } else if (perm === 'denied') {
       enableNotifBtn.hidden = true;
       notifState.textContent =
@@ -248,14 +260,27 @@
     var controller = new AbortController();
     var timer = setTimeout(function () { controller.abort(); }, 10000);
 
-    fetch(CONFIG.NOTIFY_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Token': CONFIG.NOTIFY_TOKEN
-      },
-      body: JSON.stringify({ message: label + ' — ' + time }),
-      signal: controller.signal
+    var body = { message: label + ' — ' + time };
+
+    // If this device is itself subscribed, tell the server to skip it —
+    // the sender doesn't need to receive their own notification.
+    var selfSub = pushSupported()
+      ? navigator.serviceWorker.ready.then(function (reg) {
+          return reg.pushManager.getSubscription();
+        })
+      : Promise.resolve(null);
+
+    selfSub.catch(function () { return null; }).then(function (sub) {
+      if (sub && sub.keys && sub.keys.auth) body.excludeAuth = sub.keys.auth;
+      return fetch(CONFIG.NOTIFY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Token': CONFIG.NOTIFY_TOKEN
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
     }).then(function (res) {
       clearTimeout(timer);
       return res.json().then(function (data) {
