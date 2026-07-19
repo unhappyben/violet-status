@@ -1,6 +1,6 @@
 /* Service worker: network-first caching for the app shell, plus web push
    handling. Only active over HTTPS (Vercel). */
-var CACHE = 'violet-status-v3';
+var CACHE = 'violet-status-v4';
 var ASSETS = [
   './',
   'index.html',
@@ -43,7 +43,7 @@ self.addEventListener('push', function (e) {
   var data = {};
   try { data = e.data ? e.data.json() : {}; } catch (err) {}
   e.waitUntil(
-    self.registration.showNotification(data.title || 'Violet update', {
+    self.registration.showNotification(data.title || 'Ben', {
       body: data.body || '',
       icon: 'icons/icon-192.png',
       tag: 'violet-status',

@@ -16,7 +16,11 @@
     '💤 Violet asleep',
     '👀 Violet awake',
     '🚶 Gone for a walk',
-    '🎒 In the baby carrier'
+    '🎒 In the baby carrier',
+    '☕ Getting coffee',
+    '👍 We\'re okay',
+    '👶 In the pram',
+    '🍼 Violet eating'
   ];
 
   var LS_CUSTOM = 'vn_custom_statuses_v1';
@@ -54,6 +58,7 @@
   function showApp() {
     lockScreen.hidden = true;
     appScreen.hidden = false;
+    window.scrollTo(0, 0);
     renderStatuses();
     renderHistory();
     updateNotifyBtn();

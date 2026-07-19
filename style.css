@@ -26,16 +26,17 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 24px;
+  padding-top: max(24px, 6vh);
   background: linear-gradient(160deg, #8b5cf6, #6d28d9);
 }
 
 .lock-card {
   background: var(--card);
   border-radius: 24px;
-  padding: 32px 28px;
+  padding: 24px 22px;
   width: 100%;
   max-width: 340px;
   text-align: center;

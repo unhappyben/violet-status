@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
     });
   }
 
-  const payload = JSON.stringify({ title: 'Violet update', body: message });
+  const payload = JSON.stringify({ title: 'Ben', body: message });
   const dead = [];
   let sent = 0;
 
