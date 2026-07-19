@@ -1,44 +1,48 @@
 # Violet Status
 
 One-tap baby status updates. Tap a status, tap **Notify Galina**, and a push
-notification arrives on her iPhone via [ntfy](https://ntfy.sh).
+notification arrives on her iPhone. No apps to install, no third-party
+services — a static PWA + serverless functions on Vercel, using the Web Push
+API that's built into iOS.
 
 ## How it works
 
 ```
-PWA (phone)  --POST /api/notify-->  VPS (server.py)  --POST-->  ntfy.sh  --APNs-->  Galina's iPhone
+PWA (Ben's phone)  --POST /api/notify-->  Vercel function  --web push-->  Apple APNs  -->  Galina's iPhone
+PWA (Galina's)     --POST /api/subscribe->  Vercel function  --store-->  Vercel Edge Config
 ```
 
-- The web app is a static PWA: lock screen (password) → pick a status → big
-  **Notify Galina** button.
-- `server.py` serves the app and proxies the notify call to ntfy. This keeps
-  the secret ntfy topic on the server (not in view-source) and works even on
-  networks whose DNS blocks ntfy.sh.
-- Galina's phone runs the free **ntfy** app, subscribed to the topic. ntfy
-  delivers real push notifications over APNs, so it works with the app closed.
-- Custom statuses and history are stored in `localStorage` on the sending device.
+- The app is a password-gated PWA: pick a status → big **Notify Galina** button.
+- Galina installs nothing: she opens the site in Safari, **Share → Add to Home
+  Screen**, opens the app, taps **Enable notifications**, taps Allow. iOS then
+  delivers pushes even with the app closed (requires iOS 16.4+).
+- Push subscriptions are stored in Vercel Edge Config; `api/notify` sends to
+  all of them via the `web-push` library (VAPID).
+- Apple's APNs is the delivery pipe — that's how every iOS push works; there
+  is no Apple-free push on iPhone. Nothing else third-party is involved.
 
 ## Files
 
 - `index.html`, `style.css`, `app.js`, `sha256.js` — the PWA
-- `server.py` — static server + `/api/notify` proxy (stdlib only, no deps)
-- `config.js` — **client secrets, gitignored** (`NOTIFY_URL`, `NOTIFY_TOKEN`,
-  `PASSWORD_HASH`). Template: `config.example.js`.
-- `server-config.json` — **server secrets, gitignored** (ntfy `topic`,
-  shared `token`). Template: `server-config.example.json`.
+- `sw.js`, `manifest.webmanifest`, `icons/` — PWA shell + push handler
+- `api/subscribe.js`, `api/notify.js`, `api/_store.js` — serverless functions
+- `config.js` — **gitignored client config** (`NOTIFY_TOKEN`, `VAPID_PUBLIC_KEY`,
+  `PASSWORD_HASH`). Still deployed, because `.vercelignore` overrides
+  `.gitignore`. Template: `config.example.js`.
+- `server.py`, `server-config.example.json` — legacy self-hosted ntfy-proxy
+  variant, kept for reference; not used by the Vercel deploy.
 - `gen_icons.py` — regenerates `icons/` (needs Pillow)
-- `sw.js`, `manifest.webmanifest` — PWA shell (service worker active over HTTPS only)
 
-## Setup — receiving phone (Galina)
+## Server config (Vercel env vars)
 
-1. Install the **ntfy** app from the App Store.
-2. Tap **+** and subscribe to the topic from `server-config.json`.
-3. That's it — notifications arrive like any other push.
+`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`,
+`NOTIFY_TOKEN`, `EDGE_CONFIG_ID`, `VERCEL_API_TOKEN`
 
-## Setup — sending phone
+## Deploy
 
-Open the site, enter the password, then **Share → Add to Home Screen** to use
-it like an app.
+```sh
+npx vercel --prod
+```
 
 ## Change the password
 
@@ -46,21 +50,11 @@ it like an app.
 printf 'newpassword' | shasum -a 256   # ASCII only
 ```
 
-Paste the hex digest into `PASSWORD_HASH` in `config.js` on the server (and in
-your local copy), then hard-refresh the page.
-
-## Deploy
-
-```sh
-# create server-config.json from the example, then:
-python3 server.py          # serves on :8787 (PORT env var to change)
-```
-
-Runs as a systemd service on our VPS — see `/etc/systemd/system/violet-status.service`.
+Paste the hex into `PASSWORD_HASH` in `config.js`, then redeploy.
 
 ## Honest security note
 
 The unlock password is a client-side gate: it keeps casual snoopers out, but
 anyone who can load the page can read `config.js` in the source and could POST
-to the proxy themselves. Real protection = obscure URL + the shared token, and
-the ntfy topic itself never leaves the server. Don't publish the site URL.
+to `/api/notify` themselves. Real protection = obscure URL + shared token.
+Don't publish the site URL.

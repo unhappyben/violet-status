@@ -233,3 +233,21 @@ h2 {
 }
 #toast.show { transform: translate(-50%, 0); opacity: 1; }
 #toast.error { background: var(--danger); }
+
+/* ---------- notifications ---------- */
+.notif-section { text-align: center; }
+
+.btn-notif {
+  font: inherit;
+  font-weight: 600;
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: 2px dashed var(--violet);
+  background: #fff;
+  color: var(--violet-dark);
+  cursor: pointer;
+}
+.btn-notif:disabled { opacity: .6; }
+
+.notif-state { font-size: 13px; color: var(--muted); margin: 8px 0 0; }

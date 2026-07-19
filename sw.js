@@ -1,6 +1,6 @@
-/* Service worker: network-first so updates always show, cache as offline
-   fallback. Note: only active when the site is served over HTTPS. */
-var CACHE = 'violet-status-v1';
+/* Service worker: network-first caching for the app shell, plus web push
+   handling. Only active over HTTPS (Vercel). */
+var CACHE = 'violet-status-v2';
 var ASSETS = [
   './',
   'index.html',
@@ -36,4 +36,24 @@ self.addEventListener('fetch', function (e) {
       return caches.match(e.request);
     })
   );
+});
+
+// ---------- web push ----------
+
+self.addEventListener('push', function (e) {
+  var data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (err) {}
+  e.waitUntil(
+    self.registration.showNotification(data.title || 'Violet update', {
+      body: data.body || '',
+      icon: 'icons/icon-192.png',
+      tag: 'violet-status',
+      renotify: true
+    })
+  );
+});
+
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  e.waitUntil(clients.openWindow('./'));
 });

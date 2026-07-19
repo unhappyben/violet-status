@@ -1,0 +1,8 @@
+{
+  "name": "violet-status",
+  "private": true,
+  "description": "One-tap baby status updates - PWA with web push",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

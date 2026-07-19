@@ -43,7 +43,9 @@
       lockError = $('lockError'), lockBtn = $('lockBtn'),
       statusGrid = $('statusGrid'), addForm = $('addForm'),
       newStatusInput = $('newStatusInput'), notifyBtn = $('notifyBtn'),
-      historyList = $('historyList'), toast = $('toast');
+      historyList = $('historyList'), toast = $('toast'),
+      notifSection = $('notifSection'), enableNotifBtn = $('enableNotifBtn'),
+      notifState = $('notifState');
 
   function allStatuses() { return DEFAULT_STATUSES.concat(custom); }
 
@@ -55,6 +57,7 @@
     renderStatuses();
     renderHistory();
     updateNotifyBtn();
+    refreshNotifUI();
   }
 
   function showLock() {
@@ -155,6 +158,78 @@
     showToast('Status added');
   });
 
+  // ---------- notifications (web push) ----------
+
+  function isIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+  function isStandalone() {
+    return window.navigator.standalone === true ||
+           window.matchMedia('(display-mode: standalone)').matches;
+  }
+
+  function pushSupported() {
+    return 'serviceWorker' in navigator && 'PushManager' in window &&
+           'Notification' in window && location.protocol === 'https:';
+  }
+
+  function refreshNotifUI() {
+    if (!pushSupported()) { notifSection.hidden = true; return; }
+    notifSection.hidden = false;
+    var perm = Notification.permission;
+    if (perm === 'granted') {
+      enableNotifBtn.hidden = true;
+      notifState.textContent = 'Notifications are ON for this device ✓';
+    } else if (perm === 'denied') {
+      enableNotifBtn.hidden = true;
+      notifState.textContent =
+        'Notifications are blocked — allow them in Settings → Apps → Violet Status → Notifications.';
+    } else {
+      enableNotifBtn.hidden = false;
+      notifState.textContent = (isIOS() && !isStandalone())
+        ? 'On this iPhone: tap Share → "Add to Home Screen", then open the Violet icon and come back here.'
+        : 'Enable notifications on Galina\'s phone so she receives updates.';
+    }
+  }
+
+  function urlB64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var raw = atob(base64);
+    var arr = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; ++i) arr[i] = raw.charCodeAt(i);
+    return arr;
+  }
+
+  enableNotifBtn.addEventListener('click', function () {
+    enableNotifBtn.disabled = true;
+    navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlB64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY)
+      });
+    }).then(function (sub) {
+      return fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub)
+      });
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok || !data.ok) throw new Error(data.error || 'subscribe failed');
+        showToast('Notifications enabled ✓');
+        refreshNotifUI();
+      });
+    }).catch(function (err) {
+      var msg = err && err.message ? err.message : 'Could not enable notifications';
+      if (isIOS() && !isStandalone()) {
+        msg = 'On iPhone this only works from the Home Screen app — Share → Add to Home Screen first.';
+      }
+      showToast(msg, true);
+      refreshNotifUI();
+    }).then(function () {
+      enableNotifBtn.disabled = false;
+    });
+  });
+
   // ---------- notify ----------
 
   notifyBtn.addEventListener('click', function () {
@@ -178,12 +253,16 @@
       signal: controller.signal
     }).then(function (res) {
       clearTimeout(timer);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      showToast('Sent to Galina ✓');
-      addHistory(label);
-    }).catch(function () {
+      return res.json().then(function (data) {
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || ('HTTP ' + res.status));
+        }
+        showToast('Sent to Galina ✓');
+        addHistory(label);
+      });
+    }).catch(function (err) {
       clearTimeout(timer);
-      showToast('Failed to send — check connection', true);
+      showToast(err && err.message ? err.message : 'Failed to send — check connection', true);
     }).then(function () {
       sending = false;
       updateNotifyBtn();
@@ -234,9 +313,10 @@
 
   if (load(LS_UNLOCKED, false)) { showApp(); } else { showLock(); }
 
-  // Service worker only works over https (or localhost) — fine, the app
-  // works without it too.
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    navigator.serviceWorker.register('sw.js').catch(function () {});
+    navigator.serviceWorker.register('sw.js')
+      .then(function () { refreshNotifUI(); })
+      .catch(function () {});
   }
+  refreshNotifUI();
 })();

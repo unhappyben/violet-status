@@ -1,0 +1,11 @@
+# .vercelignore replaces .gitignore for deployments, so gitignored
+# config.js IS deployed (it must be — the app reads it at runtime).
+.git
+node_modules
+server.py
+server-config.json
+server-config.example.json
+gen_icons.py
+__pycache__
+.DS_Store
+README.md
