@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#7c3aed">
+  <meta name="theme-color" content="#0d0714">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Violet">
   <title>Violet Status</title>
   <link rel="manifest" href="manifest.webmanifest">
@@ -14,11 +14,20 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- atmosphere -->
+  <div class="aurora" aria-hidden="true">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+  </div>
+  <div class="stars" aria-hidden="true"></div>
+
   <!-- Lock screen -->
   <div id="lockScreen" class="lock" hidden>
     <form id="lockForm" class="lock-card">
       <img src="icons/icon-192.png" alt="" class="lock-icon">
       <h1>Violet Status</h1>
+      <p class="lock-sub">one tap to mum 💜</p>
       <input id="passwordInput" type="password" placeholder="Password"
              autocomplete="current-password" autocapitalize="off" autocorrect="off"
              enterkeyhint="go">

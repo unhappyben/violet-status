@@ -59,6 +59,7 @@
     lockScreen.hidden = true;
     appScreen.hidden = false;
     window.scrollTo(0, 0);
+    appScreen.classList.add('revealed');
     renderStatuses();
     renderHistory();
     updateNotifyBtn();
@@ -94,14 +95,26 @@
   function renderStatuses() {
     statusGrid.innerHTML = '';
     allStatuses().forEach(function (label, idx) {
+      // Split a leading emoji from the label so it can be rendered large.
+      var match = label.match(/^(\S+)\s+([\s\S]+)$/);
+      var emoji = (match && /[^\x00-\x7F]/.test(match[1])) ? match[1] : '';
+      var text = emoji ? match[2] : label;
+
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'status-card' + (idx === selectedIdx ? ' selected' : '');
       btn.setAttribute('role', 'radio');
       btn.setAttribute('aria-checked', idx === selectedIdx ? 'true' : 'false');
 
+      if (emoji) {
+        var em = document.createElement('span');
+        em.className = 'status-emoji';
+        em.textContent = emoji;
+        btn.appendChild(em);
+      }
       var span = document.createElement('span');
-      span.textContent = label;
+      span.className = 'status-label';
+      span.textContent = text;
       btn.appendChild(span);
 
       if (idx >= DEFAULT_STATUSES.length) {
@@ -289,6 +302,7 @@
         }
         showToast('Sent to Galina ✓');
         addHistory(label);
+        celebrate();
       });
     }).catch(function (err) {
       clearTimeout(timer);
@@ -337,6 +351,30 @@
     toast.className = 'show' + (isError ? ' error' : '');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { toast.className = ''; }, 2600);
+  }
+
+  // ---------- celebration ----------
+
+  function celebrate() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var rect = notifyBtn.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+    var glyphs = ['💜', '🩷', '💖', '✨', '⭐'];
+    for (var i = 0; i < 16; i++) {
+      var p = document.createElement('span');
+      p.className = 'particle';
+      p.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+      p.style.left = cx + 'px';
+      p.style.top = cy + 'px';
+      p.style.setProperty('--dx', (Math.random() * 240 - 120) + 'px');
+      p.style.setProperty('--rot', (Math.random() * 120 - 60) + 'deg');
+      p.style.animationDelay = (Math.random() * 0.15) + 's';
+      document.body.appendChild(p);
+      (function (el) { setTimeout(function () { el.remove(); }, 2000); })(p);
+    }
+    notifyBtn.classList.add('sent');
+    setTimeout(function () { notifyBtn.classList.remove('sent'); }, 600);
   }
 
   // ---------- init ----------

@@ -1,6 +1,6 @@
 /* Service worker: network-first caching for the app shell, plus web push
    handling. Only active over HTTPS (Vercel). */
-var CACHE = 'violet-status-v4';
+var CACHE = 'violet-status-v5';
 var ASSETS = [
   './',
   'index.html',
@@ -8,6 +8,9 @@ var ASSETS = [
   'app.js',
   'sha256.js',
   'manifest.webmanifest',
+  'fonts/fraunces.woff2',
+  'fonts/fraunces-italic.woff2',
+  'fonts/karla.woff2',
   'icons/icon-180.png',
   'icons/icon-192.png',
   'icons/icon-512.png'
