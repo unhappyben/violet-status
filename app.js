@@ -168,14 +168,13 @@
     var controller = new AbortController();
     var timer = setTimeout(function () { controller.abort(); }, 10000);
 
-    fetch(CONFIG.NTFY_SERVER + '/' + encodeURIComponent(CONFIG.TOPIC), {
+    fetch(CONFIG.NOTIFY_URL, {
       method: 'POST',
       headers: {
-        'Title': CONFIG.NOTIFY_TITLE || 'Violet update',
-        'Priority': '4',
-        'Tags': 'baby'
+        'Content-Type': 'application/json',
+        'X-Token': CONFIG.NOTIFY_TOKEN
       },
-      body: label + ' — ' + time,
+      body: JSON.stringify({ message: label + ' — ' + time }),
       signal: controller.signal
     }).then(function (res) {
       clearTimeout(timer);
