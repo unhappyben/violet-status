@@ -29,7 +29,7 @@ module.exports = async (req, res) => {
   }
 
   const entries = Object.entries(subs).filter(function (pair) {
-    return pair[0] !== excludeAuth;
+    return pair[0] !== excludeAuth && !(pair[1] && pair[1].muted);
   });
   if (!entries.length) {
     return res.json({

@@ -390,6 +390,20 @@ h2 {
 
 .notif-state { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
 
+.btn-mute {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  margin-top: 8px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.btn-mute:disabled { opacity: .5; }
+
 /* ---------- toast ---------- */
 #toast {
   position: fixed;

@@ -3,7 +3,7 @@
 
   function $(id) { return document.getElementById(id); }
 
-  // Guard: config.js is gitignored, so a fresh clone won't have it.
+  // Guard: config comes from /api/client-config (env vars on the server).
   if (typeof CONFIG === 'undefined') {
     document.body.innerHTML =
       '<p style="padding:2em;font-family:-apple-system,sans-serif;line-height:1.5">' +
@@ -26,6 +26,7 @@
   var LS_CUSTOM = 'vn_custom_statuses_v1';
   var LS_HISTORY = 'vn_history_v1';
   var LS_UNLOCKED = 'vn_unlocked_v1';
+  var LS_MUTED = 'vn_muted_v1';
 
   var custom = load(LS_CUSTOM, []);
   var historyLog = load(LS_HISTORY, []);
@@ -49,7 +50,7 @@
       newStatusInput = $('newStatusInput'), notifyBtn = $('notifyBtn'),
       historyList = $('historyList'), toast = $('toast'),
       notifSection = $('notifSection'), enableNotifBtn = $('enableNotifBtn'),
-      notifState = $('notifState');
+      notifState = $('notifState'), muteBtn = $('muteBtn');
 
   function allStatuses() { return DEFAULT_STATUSES.concat(custom); }
 
@@ -189,13 +190,27 @@
            'Notification' in window && location.protocol === 'https:';
   }
 
+  function isMuted() { return load(LS_MUTED, false); }
+
+  function renderMute() {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+      muteBtn.hidden = true;
+      return;
+    }
+    muteBtn.hidden = false;
+    muteBtn.textContent = isMuted() ? '🔔 Unmute this device' : '🔕 Mute this device';
+    notifState.textContent = isMuted()
+      ? 'Notifications are MUTED on this device 🔕'
+      : 'Notifications are ON for this device ✓';
+  }
+
   function refreshNotifUI() {
     if (!pushSupported()) { notifSection.hidden = true; return; }
     notifSection.hidden = false;
     var perm = Notification.permission;
     if (perm === 'granted') {
       enableNotifBtn.hidden = true;
-      notifState.textContent = 'Notifications are ON for this device ✓';
+      renderMute();
       // Re-sync the subscription with the server on every app open
       // (idempotent upsert — self-heals if the server copy was lost).
       navigator.serviceWorker.ready.then(function (reg) {
@@ -205,20 +220,52 @@
         return fetch('/api/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(sub)
+          body: JSON.stringify({ subscription: sub })
+        }).then(function (res) {
+          return res.json().then(function (d) {
+            if (d && typeof d.muted === 'boolean') { save(LS_MUTED, d.muted); renderMute(); }
+          });
         });
       }).catch(function () {});
     } else if (perm === 'denied') {
       enableNotifBtn.hidden = true;
+      muteBtn.hidden = true;
       notifState.textContent =
         'Notifications are blocked — allow them in Settings → Apps → Violet Status → Notifications.';
     } else {
       enableNotifBtn.hidden = false;
+      muteBtn.hidden = true;
       notifState.textContent = (isIOS() && !isStandalone())
         ? 'On this iPhone: tap Share → "Add to Home Screen", then open the Violet icon and come back here.'
         : 'Enable notifications on Galina\'s phone so she receives updates.';
     }
   }
+
+  muteBtn.addEventListener('click', function () {
+    var target = !isMuted();
+    muteBtn.disabled = true;
+    navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription();
+    }).then(function (sub) {
+      if (!sub) throw new Error('No subscription on this device');
+      return fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub, muted: target })
+      });
+    }).then(function (res) {
+      return res.json().then(function (d) {
+        if (!res.ok || !d.ok) throw new Error(d.error || 'update failed');
+        save(LS_MUTED, d.muted);
+        renderMute();
+        showToast(d.muted ? 'This device is muted 🔕' : 'This device will get notifications 🔔');
+      });
+    }).catch(function (err) {
+      showToast(err && err.message ? err.message : 'Could not update', true);
+    }).then(function () {
+      muteBtn.disabled = false;
+    });
+  });
 
   function urlB64ToUint8Array(base64String) {
     var padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -240,11 +287,12 @@
       return fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub)
+        body: JSON.stringify({ subscription: sub, muted: false })
       });
     }).then(function (res) {
       return res.json().then(function (data) {
         if (!res.ok || !data.ok) throw new Error(data.error || 'subscribe failed');
+        save(LS_MUTED, false);
         showToast('Notifications enabled ✓');
         refreshNotifUI();
       });
@@ -284,7 +332,9 @@
       : Promise.resolve(null);
 
     selfSub.catch(function () { return null; }).then(function (sub) {
-      if (sub && sub.keys && sub.keys.auth) body.excludeAuth = sub.keys.auth;
+      // toJSON() is the spec-guaranteed shape; sub.keys is not exposed on iOS.
+      var j = (sub && sub.toJSON) ? sub.toJSON() : sub;
+      if (j && j.keys && j.keys.auth) body.excludeAuth = j.keys.auth;
       return fetch(CONFIG.NOTIFY_URL, {
         method: 'POST',
         headers: {
