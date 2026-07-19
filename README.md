@@ -26,17 +26,17 @@ PWA (Galina's)     --POST /api/subscribe->  Vercel function  --store-->  Vercel 
 - `index.html`, `style.css`, `app.js`, `sha256.js` — the PWA
 - `sw.js`, `manifest.webmanifest`, `icons/` — PWA shell + push handler
 - `api/subscribe.js`, `api/notify.js`, `api/_store.js` — serverless functions
-- `config.js` — **gitignored client config** (`NOTIFY_TOKEN`, `VAPID_PUBLIC_KEY`,
-  `PASSWORD_HASH`). Still deployed, because `.vercelignore` overrides
-  `.gitignore`. Template: `config.example.js`.
-- `server.py`, `server-config.example.json` — legacy self-hosted ntfy-proxy
-  variant, kept for reference; not used by the Vercel deploy.
+- `api/client-config.js` — serves the client config as JS, built from env
+  vars, so no secrets live in the repo
+- `server.py`, `config.example.js`, `server-config.example.json` — legacy
+  self-hosted variant (ntfy proxy on a plain server), kept for reference;
+  not used by the Vercel deploy
 - `gen_icons.py` — regenerates `icons/` (needs Pillow)
 
-## Server config (Vercel env vars)
+## Server config (Vercel env vars, all Production)
 
 `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`,
-`NOTIFY_TOKEN`, `EDGE_CONFIG_ID`, `VERCEL_API_TOKEN`
+`NOTIFY_TOKEN`, `PASSWORD_HASH`, `EDGE_CONFIG_ID`, `VERCEL_API_TOKEN`
 
 ## Deploy
 
@@ -48,13 +48,13 @@ npx vercel --prod
 
 ```sh
 printf 'newpassword' | shasum -a 256   # ASCII only
+printf '%s' '<hex digest>' | npx vercel env add PASSWORD_HASH production --force
+npx vercel --prod
 ```
-
-Paste the hex into `PASSWORD_HASH` in `config.js`, then redeploy.
 
 ## Honest security note
 
 The unlock password is a client-side gate: it keeps casual snoopers out, but
-anyone who can load the page can read `config.js` in the source and could POST
+anyone who can load the page can read the config in the source and could POST
 to `/api/notify` themselves. Real protection = obscure URL + shared token.
 Don't publish the site URL.

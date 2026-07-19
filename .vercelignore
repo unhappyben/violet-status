@@ -1,7 +1,6 @@
-# .vercelignore replaces .gitignore for deployments, so gitignored
-# config.js IS deployed (it must be — the app reads it at runtime).
 .git
 node_modules
+config.js
 server.py
 server-config.json
 server-config.example.json

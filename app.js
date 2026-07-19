@@ -7,8 +7,8 @@
   if (typeof CONFIG === 'undefined') {
     document.body.innerHTML =
       '<p style="padding:2em;font-family:-apple-system,sans-serif;line-height:1.5">' +
-      'Missing <code>config.js</code>. Copy <code>config.example.js</code> to ' +
-      '<code>config.js</code> and fill in your values.</p>';
+      'Could not load the app config (<code>/api/client-config</code>). ' +
+      'The deployment is missing its environment variables.</p>';
     return;
   }
 
