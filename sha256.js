@@ -1,0 +1,5 @@
+/* Minimal SHA-256 (public domain, golfed by Geraint Luff, 2013).
+   Works without Web Crypto, so the lock screen also works over plain HTTP.
+   Returns the hex digest for ASCII input; returns undefined for non-ASCII input. */
+function sha256(r){function n(r,n){return r>>>n|r<<32-n}for(var t,e,o=Math.pow,u=o(2,32),f="length",a="",c=[],i=8*r[f],h=sha256.h=sha256.h||[],l=sha256.k=sha256.k||[],g=l[f],s={},v=2;g<64;v++)if(!s[v]){for(t=0;t<313;t+=v)s[t]=v;h[g]=o(v,.5)*u|0,l[g++]=o(v,1/3)*u|0}for(r+="\x80";r[f]%64-56;)r+="\x00";for(t=0;t<r[f];t++){if((e=r.charCodeAt(t))>>8)return;c[t>>2]|=e<<(3-t)%4*8}for(c[c[f]]=i/u|0,c[c[f]]=i,e=0;e<c[f];){var m=c.slice(e,e+=16),d=h;for(h=h.slice(0,8),t=0;t<64;t++){var p=m[t-15],w=m[t-2],A=h[0],C=h[4],M=h[7]+(n(C,6)^n(C,11)^n(C,25))+(C&h[5]^~C&h[6])+l[t]+(m[t]=t<16?m[t]:m[t-16]+(n(p,7)^n(p,18)^p>>>3)+m[t-7]+(n(w,17)^n(w,19)^w>>>10)|0),y=(n(A,2)^n(A,13)^n(A,22))+(A&h[1]^A&h[2]^h[1]&h[2]);h=[M+y|0].concat(h),h[4]=h[4]+M|0}for(t=0;t<8;t++)h[t]=h[t]+d[t]|0}for(t=0;t<8;t++)for(e=3;e+1;e--){var D=h[t]>>8*e&255;a+=(16>D?0:"")+D.toString(16)}return a}
+if (typeof module !== 'undefined') module.exports = sha256;
