@@ -36,7 +36,18 @@ PWA (Galina's)     --POST /api/subscribe->  Vercel function  --store-->  Vercel 
 ## Server config (Vercel env vars, all Production)
 
 `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`,
-`NOTIFY_TOKEN`, `PASSWORD_HASH`, `EDGE_CONFIG_ID`, `VERCEL_API_TOKEN`
+`NOTIFY_TOKEN`, `PASSWORD_HASH`, `EDGE_CONFIG_ID`, `VERCEL_API_TOKEN`,
+`VERCEL_TEAM_ID` (team id `team_…` — required because the Edge Config is
+owned by a team; the REST API 403s without it)
+
+If `/api/notify` starts failing with `edge-config … 403 … invalidToken`,
+the `VERCEL_API_TOKEN` has expired or been revoked. Create a new one at
+https://vercel.com/account/tokens (choose **No Expiration**), then:
+
+```sh
+printf '%s' '<new token>' | npx vercel env add VERCEL_API_TOKEN production --force
+npx vercel --prod
+```
 
 ## Deploy
 
